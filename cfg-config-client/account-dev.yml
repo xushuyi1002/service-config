@@ -1,0 +1,94 @@
+# 描述信息
+info:
+  name: account
+  description: /swagger-ui.html
+  version: 1.0
+---
+# 服务端口
+server:
+  port: 8084
+---
+# 客户端负载均衡器
+ribbon:
+  ConnectTimeout: 600000 # 客户端连接超时
+  ReadTimeout: 600000 # 客户端读取超时
+  MaxAutoRetries: 1 # 当前环境最大重试次数
+  MaxAutoRetriesNextServer: 2 # 其他环境最大重试次数
+  eureka:
+      enabled: true
+---
+# jdbc_config datasource
+spring:
+  datasource:
+    # jdbc_config
+    driver-class-name: com.mysql.jdbc.Driver
+    url: jdbc:mysql://127.0.0.1:3306/micro2.0?useUnicode=true&amp;characterEncoding=utf-8&amp;autoReconnect=true&zeroDateTimeBehavior=convertToNull&allowMultiQueries=true&pinGlobalTxToPhysicalConnection=true&useCursorFetch=true&defaultFetchSize=1000
+    username: root
+    password: 123456
+    # Hikari will use the above plus the following to setup connection pooling
+    type: com.zaxxer.hikari.HikariDataSource
+    hikari:
+      minimum-idle: 10 # 池中维护的最小空闲连接数
+      maximum-pool-size: 20 # 池中最大连接数，包括闲置和使用中的连接
+      auto-commit: true # 自动提交从池中返回的连接
+      idle-timeout: 30000 # 连接允许在池中闲置的最长时间
+      pool-name: SpringBoot2.0-HikariCP # 连接池的用户定义名称，主要出现在日志记录和JMX管理控制台中以识别池和池配置
+      max-lifetime: 1800000 # 池中连接最长生命周期（毫秒）
+      connection-timeout: 30000 # 等待连接池分配连接的最大时长（毫秒）
+      connection-test-query: SELECT 1 # 检测连接是否有效，如果您的驱动程序支持JDBC4，我们强烈建议您不要设置此属性
+      read-only: false # 是否为只读数据源，做读写分离时有用，保证slave数据源的安全
+---
+# 断路器配置
+hystrix.command.default.execution.isolation.thread.timeoutInMilliseconds: 600000
+hystrix.command.default.execution.isolation.strategy: SEMAPHORE
+hystrix.command.default.fallback.isolation.semaphore.maxConcurrentRequests: 200000
+hystrix.command.default.execution.isolation.semaphore.maxConcurrentRequests: 200000
+hystrix.command.LocationCircuitBreaker.execution.isolation.semaphore.maxConcurrentRequests: 200000
+hystrix.command.LocationCircuitBreaker.fallback.isolation.semaphore.maxConcurrentRequests: 200000
+eureka.default.semaphore.maxSemaphores: 30000
+hystrix.command.default.execution.isolation.thread.interruptOnTimeout: false
+---
+# 指向被监控 admin server 服务
+spring:
+  boot:
+    admin:
+      client:
+        url: http://localhost:8080
+---
+# 服务管理与监控
+management:
+  endpoints:
+    web:
+      exposure:
+        # 加载所有的端点/默认只加载了 info / health
+        include: '*'
+  endpoint:
+    health:
+      show-details: always
+---
+# 调用链 Sleuth + ZipKin
+spring:
+  sleuth:
+    web:
+      client:
+        enabled: true
+    sampler:
+      probability: 1.0 # 采用比例，默认 0.1 全部采样 1.0
+  zipkin:
+    base-url: http://localhost:9411/ # 指定了Zipkin服务器的地址
+---
+# redis 集群配置
+spring:
+  redis:
+    cluster:
+      nodes: 192.168.56.101:7000,192.168.56.101:7001,192.168.56.101:7002,192.168.56.102:7003,192.168.56.102:7004,192.168.56.102:7005
+    timeout: 6000ms # 连接池超时时间（毫秒）
+    # 密码没有可以不填
+    password:
+    database: 0 # 数据库索引
+    lettuce:
+      pool:
+        max-active: 8 # 连接池最大活跃连接数（使用负值表示没有限制）
+        max-idle: 8 # 连接池最大空闲连接数
+        max-wait: -1ms # 连接池最大阻塞等待时间 毫秒（使用负值表示没有限制）
+        min-idle: 0 # 最小空闲连接数
